@@ -52,7 +52,7 @@ class shap():
             # marginal contribution for empty set
             row_empty = np.zeros(self.column_size)
             np.put(row_empty, [c], 1)
-            y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)]
+            y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)][0]
             if y_cp is not None:
                 comb = math.factorial(self.column_size - 1) / math.factorial(self.column_size)
                 marginal_cont = y_cp
@@ -79,5 +79,35 @@ class shap():
         else:
             self.y = np.array(y).reshape(-1)
 
-        return None
+        self.column_size = self.x.shape[1]
 
+        shapley_values = np.array([])
+        # caluculate shapley value for each column
+        for c in range(self.column_size):
+            # subset of columns which excludes target columns
+            target_rows_x = self.x[self.x[:, c] == 0,:]
+            # target_rows_y = self.y[self.x[:, c] == 0]
+
+            shapley_value = 0
+            # calculate marginal contribution and its coefficient
+            for target_row_x in target_rows_x:
+                # find subset include the target subset and x_i
+                row_cp = target_row_x.copy()
+                np.put(row_cp, [c], 1)
+                y_cp = self.y[(self.x == np.array(row_cp)).all(axis=1)][0]
+
+                if y_cp is not None:
+                    comb = 1 / (target_row_x.sum() + 1)
+                    marginal_cont = y_cp
+                    shapley_value += comb * marginal_cont
+
+            # marginal contribution for empty set
+            row_empty = np.zeros(self.column_size)
+            np.put(row_empty, [c], 1)
+            y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)][0]
+            if y_cp is not None:
+                shapley_value += y_cp
+
+            shapley_values = np.append(shapley_values, shapley_value)
+
+        return shapley_values
