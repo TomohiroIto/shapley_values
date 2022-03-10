@@ -41,7 +41,7 @@ class shap():
                 np.put(row_cp, [c], 1)
                 y_cp = self.y[(self.x == np.array(row_cp)).all(axis=1)]
 
-                if y_cp is not None:
+                if y_cp is not None and len(y_cp) > 0:
                     comb = (
                         math.factorial(target_row_x.sum()) *
                         math.factorial(self.column_size - target_row_x.sum() - 1)
@@ -53,7 +53,7 @@ class shap():
             row_empty = np.zeros(self.column_size)
             np.put(row_empty, [c], 1)
             y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)]
-            if y_cp is not None:
+            if y_cp is not None and len(y_cp) > 0:
                 comb = math.factorial(self.column_size - 1) / math.factorial(self.column_size)
                 marginal_cont = y_cp[0]
                 shapley_value += comb * marginal_cont
@@ -96,7 +96,7 @@ class shap():
                 np.put(row_cp, [c], 1)
                 y_cp = self.y[(self.x == np.array(row_cp)).all(axis=1)]
 
-                if y_cp is not None:
+                if y_cp is not None and len(y_cp) > 0:
                     comb = 1 / (target_row_x.sum() + 1)
                     marginal_cont = y_cp[0]
                     shapley_value += comb * marginal_cont
@@ -105,7 +105,7 @@ class shap():
             row_empty = np.zeros(self.column_size)
             np.put(row_empty, [c], 1)
             y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)]
-            if y_cp is not None:
+            if y_cp is not None and len(y_cp) > 0:
                 shapley_value += y_cp[0]
 
             shapley_values = np.append(shapley_values, shapley_value)
