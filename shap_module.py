@@ -39,23 +39,23 @@ class shap():
                 # find subset include the target subset and x_i
                 row_cp = target_row_x.copy()
                 np.put(row_cp, [c], 1)
-                y_cp = self.y[(self.x == np.array(row_cp)).all(axis=1)][0]
+                y_cp = self.y[(self.x == np.array(row_cp)).all(axis=1)]
 
                 if y_cp is not None:
                     comb = (
                         math.factorial(target_row_x.sum()) *
                         math.factorial(self.column_size - target_row_x.sum() - 1)
                     ) / math.factorial(self.column_size)
-                    marginal_cont = y_cp - target_row_y
+                    marginal_cont = y_cp[0] - target_row_y
                     shapley_value += comb * marginal_cont
 
             # marginal contribution for empty set
             row_empty = np.zeros(self.column_size)
             np.put(row_empty, [c], 1)
-            y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)][0]
+            y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)]
             if y_cp is not None:
                 comb = math.factorial(self.column_size - 1) / math.factorial(self.column_size)
-                marginal_cont = y_cp
+                marginal_cont = y_cp[0]
                 shapley_value += comb * marginal_cont
 
             shapley_values = np.append(shapley_values, shapley_value)
@@ -94,19 +94,19 @@ class shap():
                 # find subset include the target subset and x_i
                 row_cp = target_row_x.copy()
                 np.put(row_cp, [c], 1)
-                y_cp = self.y[(self.x == np.array(row_cp)).all(axis=1)][0]
+                y_cp = self.y[(self.x == np.array(row_cp)).all(axis=1)]
 
                 if y_cp is not None:
                     comb = 1 / (target_row_x.sum() + 1)
-                    marginal_cont = y_cp
+                    marginal_cont = y_cp[0]
                     shapley_value += comb * marginal_cont
 
             # marginal contribution for empty set
             row_empty = np.zeros(self.column_size)
             np.put(row_empty, [c], 1)
-            y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)][0]
+            y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)]
             if y_cp is not None:
-                shapley_value += y_cp
+                shapley_value += y_cp[0]
 
             shapley_values = np.append(shapley_values, shapley_value)
 
