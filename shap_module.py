@@ -1,61 +1,74 @@
 import pandas as pd
 import numpy as np
-import scipy as sp
-from itertools import combinations
+from itertools import product
 import math
 
 class shap():
     def __init__(self):
         _ = 1
 
-    def shap_values(self, x, y):
+    def _conv_profit_to_contribution(self, x, y):
 
         if isinstance(x, pd.DataFrame):
-            self.x = x.values
+            xp = x.values
         elif isinstance(x, np.ndarray):
-            self.x = x
+            xp = x
         else:
-            self.x = np.array(x)
+            xp = np.array(x)
 
         if isinstance(y, pd.DataFrame):
-            self.y = y.values.reshape(-1)
+            yp = y.values.reshape(-1)
         elif isinstance(x, np.ndarray):
-            self.y = y.reshape(-1)
+            yp = y.reshape(-1)
         else:
-            self.y = np.array(y).reshape(-1)
+            yp = np.array(y).reshape(-1)
 
+        column_size = xp.shape[1]
+        subsets = np.array(list(product(*[[0, 1] for d in range(column_size)])))
+
+        y_ret = np.array([])
+        for subset in subsets:
+            new_y = 0
+            subsubsets = np.array(list(product(*[[0] if d == 0 else [0, 1] for d in subset])))
+            for subsubset in subsubsets:
+                y_found = yp[(xp == subsubset).all(axis=1)]
+                if y_found is not None and len(y_found) > 0:
+                    new_y += y_found[0]
+
+            y_ret = np.append(y_ret, new_y)
+
+        return subsets, y_ret
+
+
+    def shap_values(self, x, y):
+        self.x, self.y = self._conv_profit_to_contribution(x, y)
         self.column_size = self.x.shape[1]
 
-        shapley_values = np.array([])
         # caluculate shapley value for each column
+        shapley_values = np.array([])
         for c in range(self.column_size):
-            # subset of columns which excludes target columns
-            target_rows_x = self.x[self.x[:, c] == 0,:]
-            target_rows_y = self.y[self.x[:, c] == 0]
+            # subset of columns which excludes current column
+            target_rows_x = np.array(list(product(*[[0] if d == c else [0, 1] for d in range(self.column_size)])))
 
-            shapley_value = 0
             # calculate marginal contribution and its coefficient
-            for target_row_x, target_row_y in zip(target_rows_x, target_rows_y):
-                # find subset include the target subset and x_i
+            shapley_value = 0
+            for target_row_x in target_rows_x:
+                # find subset include the current subset and x_i
                 row_cp = target_row_x.copy()
                 np.put(row_cp, [c], 1)
+                target_row_y = self.y[(self.x == np.array(target_row_x)).all(axis=1)]
                 y_cp = self.y[(self.x == np.array(row_cp)).all(axis=1)]
 
-                if y_cp is not None and len(y_cp) > 0:
-                    comb = (
-                        math.factorial(target_row_x.sum()) *
-                        math.factorial(self.column_size - target_row_x.sum() - 1)
-                    ) / math.factorial(self.column_size)
-                    marginal_cont = y_cp[0] - target_row_y
-                    shapley_value += comb * marginal_cont
+                if target_row_y is None or len(target_row_y) == 0:
+                    target_row_y = 0
+                if y_cp is None or len(y_cp) == 0:
+                    y_cp = 0
 
-            # marginal contribution for empty set
-            row_empty = np.zeros(self.column_size)
-            np.put(row_empty, [c], 1)
-            y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)]
-            if y_cp is not None and len(y_cp) > 0:
-                comb = math.factorial(self.column_size - 1) / math.factorial(self.column_size)
-                marginal_cont = y_cp[0]
+                comb = (
+                    math.factorial(target_row_x.sum()) *
+                    math.factorial(self.column_size - target_row_x.sum() - 1)
+                ) / math.factorial(self.column_size)
+                marginal_cont = y_cp[0] - target_row_y
                 shapley_value += comb * marginal_cont
 
             shapley_values = np.append(shapley_values, shapley_value)
@@ -81,17 +94,16 @@ class shap():
 
         self.column_size = self.x.shape[1]
 
-        shapley_values = np.array([])
         # caluculate shapley value for each column
+        shapley_values = np.array([])
         for c in range(self.column_size):
-            # subset of columns which excludes target columns
-            target_rows_x = self.x[self.x[:, c] == 0,:]
-            # target_rows_y = self.y[self.x[:, c] == 0]
+            # subset of columns which excludes current column
+            target_rows_x = np.array(list(product(*[[0] if d == c else [0, 1] for d in range(self.column_size)])))
 
-            shapley_value = 0
             # calculate marginal contribution and its coefficient
+            shapley_value = 0
             for target_row_x in target_rows_x:
-                # find subset include the target subset and x_i
+                # find subset include the current subset and x_i
                 row_cp = target_row_x.copy()
                 np.put(row_cp, [c], 1)
                 y_cp = self.y[(self.x == np.array(row_cp)).all(axis=1)]
@@ -100,13 +112,6 @@ class shap():
                     comb = 1 / (target_row_x.sum() + 1)
                     marginal_cont = y_cp[0]
                     shapley_value += comb * marginal_cont
-
-            # marginal contribution for empty set
-            row_empty = np.zeros(self.column_size)
-            np.put(row_empty, [c], 1)
-            y_cp = self.y[(self.x == np.array(row_empty)).all(axis=1)]
-            if y_cp is not None and len(y_cp) > 0:
-                shapley_value += y_cp[0]
 
             shapley_values = np.append(shapley_values, shapley_value)
 
